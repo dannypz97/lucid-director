@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Secrets (API keys go in .env, never in config)
+.env
+.env.*
+
+# Run outputs: logs, recordings, plots
+runs/
+
+# Game assets: never commit WADs (license); users supply their own
+*.wad
+*.WAD
+
+# Model weights and compiled engines (licensed / huge; downloaded at runtime)
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.bin
+*.onnx
+*.engine
+models/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Claude Code local settings
+.claude/settings.local.json
