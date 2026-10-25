@@ -82,7 +82,7 @@ They're done in order; ask for them one at a time.
 
 - [x] **0.0 Repo hygiene.** README.md, PLAN.md, .gitignore.
 
-- [ ] **0.1 Packaging and venv.**
+- [x] **0.1 Packaging and venv.**
   `pyproject.toml` (src layout, runtime deps: numpy, pydantic, pyyaml; dev extras: pytest),
   `src/lucid_director/__init__.py`, a placeholder `__main__.py`, venv instructions.
   *Why:* the "src layout" means tests import the *installed* package, not whatever happens to be

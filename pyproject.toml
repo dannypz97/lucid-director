@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lucid-director"
+version = "0.0.1"
+description = "Real-time neural reskinning of games, with an LLM acting as art director."
+readme = "README.md"
+requires-python = ">=3.13"
+authors = [{ name = "Daniyal Parveez" }]
+# Only what Phase 0 needs. Heavy deps (torch, diffusers, vizdoom, opencv) become
+# optional extras in later phases, so the stub + tests stay installable anywhere.
+dependencies = [
+    "numpy>=2.0",
+    "pydantic>=2.6",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+lucid-director = "lucid_director.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
