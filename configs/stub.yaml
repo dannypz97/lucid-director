@@ -1,0 +1,32 @@
+# Stub run: synthetic frames, fake pipeline, no display. No GPU, game, or network needed.
+hardware:
+  profile: auto
+
+frame_source:
+  type: stub
+  resolution: [320, 200]
+  seed: 0
+
+pipeline:
+  type: stub
+  resolution: [384, 240]   # same 16:10 aspect as the source
+  initial:
+    prompt: "flooded neon city, photoreal"
+    strength: 0.5
+    steps: 2
+    seed_policy: fixed
+
+display:
+  type: none
+
+llm:
+  provider: scripted
+  call_interval_s: 5
+
+agent:
+  goal: "Maximize style intensity while keeping fps >= 20."
+  budgets: {min_fps: 20, max_p95_latency_ms: 120, max_flicker: 0.15}
+  max_steps_per_episode: 30
+
+logging:
+  dir: runs/

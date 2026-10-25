@@ -90,9 +90,10 @@ They're done in order; ask for them one at a time.
   effect without reinstalling.
   *Done when:* `pip install -e ".[dev]"` works and `python -m lucid_director --help` prints usage.
 
-- [ ] **0.2 Config models and loader.**
-  Pydantic models for each config section (`hardware`, `frame_source`, `pipeline`, `llm`, `agent`,
-  `logging`), `load_config(path)`, and `configs/stub.yaml`.
+- [x] **0.2 Config models and loader.**
+  Pydantic models for each config section (`hardware`, `frame_source`, `pipeline`, `display`, `llm`,
+  `agent`, `logging`), `load_config(path)`, and `configs/stub.yaml`. Each swappable section has
+  `type` + `options`, and implementation-specific keys go in `options`.
   *Why:* the config is the contract for "everything swappable". Pydantic turns a typo like
   `stregth: 2` into a clear error at startup instead of a strange bug ten minutes into a run.
   *Done when:* `tests/test_config.py` passes. It covers a valid config, an unknown key, and an
@@ -224,6 +225,12 @@ Tasks:
 - [ ] Hardware detect (GPU, VRAM, RAM, CPU) + profiles (`low`/`mid`/`high`)
 - [ ] Calibration (~10 s): measure achievable fps at a few resolutions; derive budgets and bounds
 - [ ] Hardware + calibration recorded in every run log
+- [ ] Optional **tiny VAE (TAESD)** for decoding: a drop-in replacement that is many times faster
+      than the full VAE and slightly softer. Config switch `pipeline.options.vae: full | tiny`;
+      calibration measures both.
+- [ ] **Game timing mode** (ViZDoom source option): `lockstep` (the game advances only when a
+      styled frame is ready: no lag, slow motion) vs `frameskip` (the game advances N tics per
+      styled frame: normal speed, choppier)
 
 **Milestone:** Doom restyled live, with real calibration numbers in the log.
 
@@ -251,6 +258,8 @@ Tasks:
 - [ ] Flicker metric (Farneback flow warp error, normalized against source frames)
 - [ ] Structure fidelity (edge/depth agreement); style score (CLIP, low rate, on CPU)
 - [ ] Seed policy, latent blending, or flow warping experiments
+- [ ] **Keyframes + warping:** diffuse every Nth frame, and warp the last styled frame by optical
+      flow in between. Cheap, smoother, and higher fps; `N` becomes another agent knob.
 - [ ] Wire all of this into `get_metrics`
 
 **Milestone:** measurable flicker reduction vs. baseline, shown in a plot.
@@ -352,8 +361,63 @@ tension), and let the agent mix them in response to the game:
 doesn't, a second domain just adds more of the same problem. The only thing we do earlier is
 namespace tools by backend in Phase 1.
 
+### Phase 7 (candidate): distilled fast pipeline
+
+Live diffusion is slow on this laptop (~10–15 fps estimated). Use it as a **teacher**, offline,
+and train a small fast **student** to copy it.
+
+1. **Data:** replay Phase 5's recorded demos through SD-Turbo offline (speed doesn't matter) and
+   save (game frame → styled frame) pairs.
+2. **Train** a small image-to-image network (fast-neural-style / small U-Net class) on those
+   pairs. Add a temporal-consistency loss so the student learns *not* to flicker.
+3. **Serve** it as `DistilledPipeline`, just another `Pipeline` backend.
+4. **Eval** it against live diffusion on fps, latency, flicker, and style/fidelity.
+
+Trade-off: one student per style (or a few), so the agent picks between trained styles instead of
+writing free-form prompts. It adds a new skill (training models), so it comes after v0.1, once
+Phases 3 and 5 exist.
+
+Read: PyTorch examples, [fast neural style](https://github.com/pytorch/examples/tree/main/fast_neural_style);
+Richter et al., [Enhancing Photorealism Enhancement](https://arxiv.org/abs/2105.04619) (GTA V;
+watch the videos, read figure 1).
+
+### Offline texture-pack baking
+
+Run diffusion once over Doom's textures and sprites to produce a restyled texture pack. The game
+then renders it natively: full fps, no lag, no flicker. It looks less photoreal (geometry and
+lighting stay Doom's), and swapping packs likely needs a level reload. The agent could pick
+between pre-baked packs. This would be a separate offline tool, not a `Pipeline`.
+
+### Policy distillation (cheap director)
+
+Log the LLM agent's decisions across many runs (scene features → settings chosen), then train a
+tiny classifier to imitate them. You get an instant, free, offline director, plus another baseline
+between the bandit and the LLM in the eval table.
+
 ### Other ideas
 
 - Prompt enemies differently from walls using the labels buffer
 - Local LLM comparison (Ollama) in the eval harness
 - Hardware comparison on the new laptop
+
+### Hallucination mode (lowest priority)
+
+Add things the player sees but the game doesn't know about: new walls, murals, enemies. The hard
+part isn't drawing them; it's keeping them **anchored** as the camera moves. Approaches, in the
+order to try them:
+
+1. **Reskin existing objects** (the best first version). Use the labels buffer to restyle each
+   enemy or object with its own prompt ("imps → neon jellyfish"). The game still tracks the
+   object, so gameplay and visuals stay in sync. Extends "prompt enemies differently" above.
+2. **Real placeholders.** Place plain objects in the map (SLADE / ZDoom scripting) that the game
+   *does* register (collision, enemies), and let diffusion decide how they look. The engine
+   handles anchoring.
+3. **World-anchored fakes.** Pick a 3D point, project it to the screen each frame using player
+   pose + depth buffer (with occlusion), then either inpaint that patch with a fixed seed or
+   paste a once-generated image there and let the style pass blend it in.
+4. **Prompt only** (a toy). High strength + "tentacles on the walls". Fun, but objects flicker
+   and wander because every frame invents them from scratch.
+
+A possible agent tool: `visual.add_hallucination(prompt, anchor)`, driven by scene info
+("health low → walls close in"). This is creative direction, where an LLM should clearly beat
+the numeric baselines. Needs Phase 4 (depth conditioning, temporal stability) first.
