@@ -2,8 +2,8 @@
 
 The working plan for lucid-director. The README says *what* this is; this file says *how we get
 there*, *why each step exists*, and *what to read* so the concepts make sense.
-[docs/CONCEPTS.md](docs/CONCEPTS.md) explains the ideas themselves; update it alongside each
-sub-task that introduces a new one.
+[docs/CONCEPTS.md](docs/CONCEPTS.md) explains the ideas themselves. New essential concepts are
+offered at the end of each sub-task and added only if approved.
 
 ## Goals (in priority order)
 
@@ -108,21 +108,28 @@ They're done in order; ask for them one at a time.
   `core/interfaces.py`, plus a **registry** with lazy imports (`type: stub` → class).
   *Why:* the interfaces are the whole portability story. Core code talks only to these, so swapping
   Doom for another game, or SD-Turbo for StreamDiffusion, is a config change.
-  *Done when:* importing works and the registry resolves `stub` names (a quick test).
+  *Done when:* `test_types.py` and `test_registry.py` pass. The built-in registry starts empty;
+  each stub registers itself as it's written (0.5, 0.6, 0.7), so it never names something missing.
+  Also added `StyleSettings.with_changes()` (validated copy; `model_copy(update=...)` skips
+  validation).
 
 - [ ] **0.4 Clock and timing stats.**
   An injectable `Clock` (real and fake), and a rolling-window `TimingStats` (fps, p50/p95 latency,
-  per-stage ms).
+  per-stage ms). A `fake_clock` fixture in `tests/conftest.py`.
   *Why:* the fake clock makes tests instant and deterministic, with no `sleep()` and no flaky
   timing. Percentiles matter because averages hide stutters: p95 latency is what you actually *feel*.
-  *Done when:* a test feeds known timings into `TimingStats` and checks fps and p95.
+  The fake clock is also how `StubPipeline` (0.6) "takes time": it advances the clock by its
+  simulated latency instead of sleeping.
+  *Done when:* a test feeds known timings into `TimingStats` and checks fps and p95. Offer clock
+  injection and percentiles for `docs/CONCEPTS.md`.
 
 - [ ] **0.5 `StubSource`.**
   Synthetic moving frames (shapes drifting over a gradient), optional fake depth, and a canned
   `scene_summary()`.
   *Why:* later flicker and fidelity metrics need frames with real motion and structure, and this
   gives them a reproducible version.
-  *Done when:* it yields N frames of the configured resolution, deterministic for a given seed.
+  *Done when:* it yields N frames of the configured resolution, deterministic for a given seed,
+  and is registered as `frame_source: stub`.
 
 - [ ] **0.6 `StubPipeline`.**
   Returns the input frame (lightly tinted) and simulates cost and quality from the settings:
@@ -133,11 +140,15 @@ They're done in order; ask for them one at a time.
   **real sweet spot**, not an obvious corner. Otherwise "the agent found the optimum" proves nothing.
   *Done when:* `tests/test_stub_pipeline.py` checks the directions: more steps means lower fps,
   more strength means a higher style score and more flicker, and a fixed seed means less flicker.
+  Registered as `pipeline: stub`. Stub-specific settings (noise level, base latency) go in
+  `pipeline.options`.
 
 - [ ] **0.7 Runtime loop, `NullDisplay`, CLI.**
   `run(config, frames=N)` wires source → pipeline → display through the registry and collects
-  timing. `NullDisplay` discards frames. The CLI `--config` / `--frames` options print a summary
-  table.
+  timing. A preprocess step resizes from `frame_source.resolution` to `pipeline.resolution`, and
+  handles aspect-ratio mismatch (resize-to-fit / letterbox) rather than rejecting it.
+  `NullDisplay` discards frames and is registered as `display: none`. The CLI `--config` /
+  `--frames` options print a summary table.
   *Why:* this is the first end-to-end data plane. It runs single-threaded for now; the agent
   thread arrives in Phase 1, after the loop is proven.
   *Done when:* `python -m lucid_director --config configs/stub.yaml --frames 300` prints fps,
@@ -179,7 +190,13 @@ Tasks:
 - [ ] **Namespace tools by backend** (e.g. `visual.set_strength`), registered by each configured
       backend, so the agent's tool list is built from config. It's cheap now, and later it lets an
       audio backend (see Later) add `audio.*` tools without touching the agent loop.
-- [ ] `Controller` interface; `FixedController`, `RandomWalkController`, `HillClimbController`
+- [ ] `Controller` interface; `FixedController`, `RandomWalkController`, `HillClimbController`.
+      Selected by a new `agent.controller` field (`llm | hill_climb | bandit | random_walk | fixed`);
+      the `llm` section is only read when `controller: llm`.
+- [ ] **Step = one decision turn**, including "no change" (each costs an LLM call). Track the
+      number of actual setting changes as a separate metric.
+- [ ] Validate at config load: `agent.decision_interval_s` ≥ the post-change measurement window,
+      so the controller never decides on metrics from before its last change.
 - [ ] Hill-climber on the stub finds the optimum. This gives a **reference answer** for checking
       the LLM, and a test that the stub's trade-off is actually optimizable
 

@@ -41,5 +41,6 @@ models/
 .DS_Store
 Thumbs.db
 
-# Claude Code local settings
+# Claude Code local settings and private session handoff notes
 .claude/settings.local.json
+HANDOFF.md
