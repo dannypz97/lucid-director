@@ -2,6 +2,8 @@
 
 The working plan for lucid-director. The README says *what* this is; this file says *how we get
 there*, *why each step exists*, and *what to read* so the concepts make sense.
+[docs/CONCEPTS.md](docs/CONCEPTS.md) explains the ideas themselves; update it alongside each
+sub-task that introduces a new one.
 
 ## Goals (in priority order)
 

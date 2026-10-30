@@ -96,3 +96,5 @@ Dev machine: RTX 3060 Laptop (6 GB VRAM), 16 GB RAM, native Windows 11.
 ## Project plan and learning resources
 
 See [PLAN.md](PLAN.md) for phases, decisions, risks, and beginner-friendly reading for each phase.
+New to diffusion or LLM agents? [docs/CONCEPTS.md](docs/CONCEPTS.md) explains the ideas behind
+the code: frames, depth and labels, latents, tool use, budgets, and every config field.
