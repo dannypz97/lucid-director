@@ -60,6 +60,10 @@ class StyleSettings(_Strict):
     steps: int = Field(default=2, ge=1, le=50)
     seed_policy: Literal["fixed", "per_frame"] = "fixed"
 
+    def with_changes(self, **changes: Any) -> StyleSettings:
+        """Return a validated copy. (``model_copy(update=...)`` skips validation.)"""
+        return StyleSettings.model_validate({**self.model_dump(), **changes})
+
 
 class PipelineConfig(_Strict):
     type: str = "stub"

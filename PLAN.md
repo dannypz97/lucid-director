@@ -99,10 +99,11 @@ They're done in order; ask for them one at a time.
   *Done when:* `tests/test_config.py` passes. It covers a valid config, an unknown key, and an
   out-of-range value.
 
-- [ ] **0.3 Core types and interfaces.**
-  Dataclasses `Frame` (image plus optional depth/labels, timestamp, index), `PipelineSettings`
-  (prompt, strength, steps, seed policy), `FrameTiming`. ABCs `FrameSource`, `Pipeline`,
-  `LLMClient`, `Display` with docstrings, plus a small **registry** (`type: stub` → class).
+- [x] **0.3 Core types and interfaces.**
+  Dataclasses `Frame` (image plus optional depth/labels, timestamp, index), `PipelineResult`
+  (image, per-stage ms, pipeline-reported metrics), and provider-neutral LLM message types. Settings
+  reuse `StyleSettings` from config. ABCs `FrameSource`, `Pipeline`, `LLMClient`, `Display` in
+  `core/interfaces.py`, plus a **registry** with lazy imports (`type: stub` → class).
   *Why:* the interfaces are the whole portability story. Core code talks only to these, so swapping
   Doom for another game, or SD-Turbo for StreamDiffusion, is a config change.
   *Done when:* importing works and the registry resolves `stub` names (a quick test).
