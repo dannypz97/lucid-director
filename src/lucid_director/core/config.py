@@ -94,7 +94,6 @@ class DisplayConfig(_Strict):
 class LLMConfig(_Strict):
     provider: str = "scripted"
     model: str | None = None
-    call_interval_s: float = Field(default=5.0, gt=0)
     options: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -107,7 +106,8 @@ class Budgets(_Strict):
 class AgentConfig(_Strict):
     goal: str = ""
     budgets: Budgets = Field(default_factory=Budgets)
-    max_steps_per_episode: int = Field(default=30, ge=1)
+    decision_interval_s: float = Field(default=5.0, gt=0)  # time between controller decisions
+    max_steps_per_episode: int = Field(default=30, ge=1)  # max decisions, including "no change"
 
 
 class LoggingConfig(_Strict):
