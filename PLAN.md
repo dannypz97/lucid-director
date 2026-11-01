@@ -113,7 +113,7 @@ They're done in order; ask for them one at a time.
   Also added `StyleSettings.with_changes()` (validated copy; `model_copy(update=...)` skips
   validation).
 
-- [ ] **0.4 Clock and timing stats.**
+- [x] **0.4 Clock and timing stats.**
   An injectable `Clock` (real and fake), and a rolling-window `TimingStats` (fps, p50/p95 latency,
   per-stage ms). A `fake_clock` fixture in `tests/conftest.py`.
   *Why:* the fake clock makes tests instant and deterministic, with no `sleep()` and no flaky
@@ -122,6 +122,11 @@ They're done in order; ask for them one at a time.
   simulated latency instead of sleeping.
   *Done when:* a test feeds known timings into `TimingStats` and checks fps and p95. Offer clock
   injection and percentiles for `docs/CONCEPTS.md`.
+  Lives in `core/timing.py`, not `interfaces.py` or the registry: the clock is injected in code,
+  not chosen by config. `TimingStats.record(start, end, stage_ms)` takes timestamps rather than
+  reading a clock; `summary()` returns a `TimingSummary` (frames, `window_s`, fps, p50/p95,
+  per-stage ms). `window_s` shows how much time the frame-count window covers, which grows at
+  low fps. Percentiles use nearest-rank, so p95 is always a latency some frame actually had.
 
 - [ ] **0.5 `StubSource`.**
   Synthetic moving frames (shapes drifting over a gradient), optional fake depth, and a canned
@@ -419,6 +424,10 @@ between the bandit and the LLM in the eval table.
 - Prompt enemies differently from walls using the labels buffer
 - Local LLM comparison (Ollama) in the eval harness
 - Hardware comparison on the new laptop
+- Time-based `TimingStats` window (e.g. last 5 s instead of last 120 frames), so stats stay
+  equally fresh at any fps and the agent sees the effect of a change sooner. Trade-off: few
+  frames at low fps make p95 noisy (maybe keep a minimum frame count). Revisit when the agent
+  first reads timing stats (Phase 1).
 
 ### Hallucination mode (lowest priority)
 
