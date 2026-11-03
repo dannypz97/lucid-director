@@ -140,6 +140,9 @@ They're done in order; ask for them one at a time.
   `extra="forbid"`): `frames` (300), `shapes` (3), `max_speed` (3 px/frame), `depth` (off).
   Shapes bounce off the edges so they never leave the frame. Depth is float32, background 1.0,
   shapes 0.2–0.8. `scene_summary()` lists the shapes by nearest colour name.
+  - [x] Preview script `scripts/preview_source.py`: plays any config's frame source in a tkinter
+    window (bundled with Python, no installs), depth map alongside when present, `--scale` and
+    `--fps`. A developer tool, not a `Display`; the real window is Phase 2's `OpenCVWindow`.
 
 - [ ] **0.6 `StubPipeline`.**
   Returns the input frame (lightly tinted) and simulates cost and quality from the settings:
