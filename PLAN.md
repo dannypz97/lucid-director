@@ -128,13 +128,18 @@ They're done in order; ask for them one at a time.
   per-stage ms). `window_s` shows how much time the frame-count window covers, which grows at
   low fps. Percentiles use nearest-rank, so p95 is always a latency some frame actually had.
 
-- [ ] **0.5 `StubSource`.**
+- [x] **0.5 `StubSource`.**
   Synthetic moving frames (shapes drifting over a gradient), optional fake depth, and a canned
   `scene_summary()`.
   *Why:* later flicker and fidelity metrics need frames with real motion and structure, and this
   gives them a reproducible version.
   *Done when:* it yields N frames of the configured resolution, deterministic for a given seed,
   and is registered as `frame_source: stub`.
+  Lives in `sources/stub.py`. Built as `StubSource(section, clock=None)`: the clock is an optional
+  second argument (defaults to `RealClock`), so `cls(section)` still works. Options (validated,
+  `extra="forbid"`): `frames` (300), `shapes` (3), `max_speed` (3 px/frame), `depth` (off).
+  Shapes bounce off the edges so they never leave the frame. Depth is float32, background 1.0,
+  shapes 0.2–0.8. `scene_summary()` lists the shapes by nearest colour name.
 
 - [ ] **0.6 `StubPipeline`.**
   Returns the input frame (lightly tinted) and simulates cost and quality from the settings:

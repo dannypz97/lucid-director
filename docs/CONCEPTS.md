@@ -85,6 +85,9 @@ longer matches the real geometry. Depth conditioning (ControlNet, Phase 4) tells
 wall 3 m away here; keep it, just make it neon."* Depth also drives structure-fidelity scoring and
 occlusion (a fake object hidden behind a real pillar). Doom computes depth anyway; ViZDoom hands
 it over. Screen capture can't, so it leaves `depth=None` and depth tools aren't offered.
+`StubSource` fakes it with flat layers (`options.depth: true`): background at 1.0, each shape at a
+fixed depth between 0.2 and 0.8, nearer shapes drawn on top. Enough to exercise every depth code
+path without a real 3D scene.
 
 **Labels:**
 ```
@@ -270,6 +273,24 @@ thread adds **zero** per-frame cost. Nearly all the time is diffusion. Rough est
 - **pytest fixtures:** a test parameter named `tmp_path` gets a new temporary folder per test,
   injected by name. Custom fixtures live in `tests/conftest.py`. Run `pytest -v` to see test names
   and `pytest --fixtures` to list fixtures.
+- **Seeded determinism:** a random generator started from the same **seed** produces the same
+  "random" numbers every time. `StubSource` draws everything random (colours, sizes, positions,
+  speeds) once, at startup, from `frame_source.seed`, so the same seed gives identical frames. A
+  failing test can then be replayed exactly, and two settings can be compared on the same input.
+  `seed: null` gives different frames each run.
+- **Linear interpolation ("lerp"):** blending between two values `a` and `b` by a fraction `t`
+  from 0 to 1: `a + t × (b − a)`, i.e. "start at `a`, travel fraction `t` of the way to `b`".
+  `t = 0` gives `a`, `t = 1` gives `b` (the `a` and `−a` cancel), `t = 0.5` the midpoint. The
+  equivalent form `(1 − t) × a + t × b` shows it as a mix: `t` of `b`, the rest `a`. The stub's
+  background gradient lerps two colours, with `t` set by each pixel's position. The same idea
+  appears in img2img **strength** (how far from the image toward noise), smoothing setting
+  changes, and blending frames.
+- **numpy broadcasting:** how numpy combines arrays of different shapes without loops. Shapes are
+  compared from the **right**; a dimension of size 1, or a missing one, is stretched to match the
+  other. `(H, W, 1) × (3,)` → `(H, W, 3)`: one value per pixel times one value per colour channel.
+  The result never has more dimensions than the largest input, and nothing is actually copied.
+  `t[..., None]` adds a size-1 axis (`(H, W)` → `(H, W, 1)`) so a per-pixel value lines up with the
+  colour channels; without it, numpy would try to match `W` against `3` and fail.
 
 ## 11. Glossary
 
@@ -285,10 +306,13 @@ thread adds **zero** per-frame cost. Nearly all the time is diffusion. Rough est
 | **fp16** | 16-bit floating point; half the memory of fp32 |
 | **Guard** | The layer that validates, clamps, and rate-limits tool calls before they touch settings |
 | **Hill climbing** | Nudge one setting; keep the change if the score improved, otherwise revert |
+| **Broadcasting** | numpy stretching size-1 or missing dimensions so arrays of different shapes combine |
 | **Latent** | The compressed image representation diffusion works on |
+| **Lerp** | Linear interpolation: `a + t × (b − a)`, a blend from `a` (t = 0) to `b` (t = 1) |
 | **Optical flow** | How each pixel moved between two frames |
 | **p50 / p95** | Median / 95th percentile; 95% of samples are below p95 |
 | **Rollback** | Automatically reverting a change that broke a budget |
+| **Seed** | The starting value of a random generator; the same seed gives the same "random" sequence |
 | **Stub** | A fake implementation with the real interface, for building and testing |
 | **TAESD** | A tiny, much faster VAE decoder; slightly softer output |
 | **Tic** | One Doom game update; 35 per second at normal speed |
