@@ -161,6 +161,20 @@ game frame ──VAE encode──▶ latent ──UNet × steps──▶ styled 
 The controller's job is to find a good balance among these. `StubPipeline` fakes the same shape of
 trade-offs so that search can be tested without a GPU.
 
+**Diminishing returns:** each extra unit of a setting helps less than the one before. A curve like
+`1 − e^(−k·x)` models it: it rises steeply at first, then flattens toward 1 (larger `k` flattens
+sooner). The stub's style score uses `k = 3` for strength: 0.2→0.4 adds about 0.26, 0.6→0.8 only
+about 0.08. The step bonus behaves the same way. Real systems show it everywhere: the fourth
+diffusion step improves the image far less than the second.
+
+**Sweet spot:** the best setting once the budgets rule some settings out. Style alone says "max
+strength, max steps"; the fps budget caps steps and the flicker budget caps strength, so the best
+*allowed* setting sits where those limits meet. Diminishing returns are what make that point
+interesting: past it, each bit of extra style costs more than it's worth. For the stub under the
+demo budgets (fps ≥ 20, flicker ≤ 0.15), it's 3 steps, strength 0.75, `fixed`. That's inside the
+ranges, not at a corner, so a controller that finds it has actually searched. A test re-checks
+this whenever the formulas change.
+
 `PipelineResult.stage_ms` times each stage separately because different bottlenecks have different
 fixes:
 
@@ -329,6 +343,7 @@ thread adds **zero** per-frame cost. Nearly all the time is diffusion. Rough est
 | **Bandit** | Picks among a few options ("arms"), learning which pays off while still exploring |
 | **CLIP** | A model that puts images and text in a shared space; used to score "does this look like the prompt?" |
 | **ControlNet** | An add-on that guides diffusion with extra inputs like depth or edges |
+| **Diminishing returns** | Each extra unit of a setting helps less than the last; modelled with `1 − e^(−k·x)` |
 | **Distillation** | Training a fast "student" model to imitate a slow "teacher" model |
 | **Flicker** | Frame-to-frame instability, measured by warping frame t−1 onto t with optical flow and comparing |
 | **fp16** | 16-bit floating point; half the memory of fp32 |
@@ -346,6 +361,7 @@ thread adds **zero** per-frame cost. Nearly all the time is diffusion. Rough est
 | **Strength** | How much noise img2img adds before denoising: 0 keeps the input, 1 ignores it |
 | **Style score** | How strongly the output matches the prompt's style, e.g. scored with CLIP |
 | **Stub** | A fake implementation with the real interface, for building and testing |
+| **Sweet spot** | The best setting that still meets every budget; for a useful test, not at a range limit |
 | **TAESD** | A tiny, much faster VAE decoder; slightly softer output |
 | **Tic** | One Doom game update; 35 per second at normal speed |
 | **Tool use** | The LLM returning structured function-call requests that our code executes |

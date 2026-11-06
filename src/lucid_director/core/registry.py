@@ -67,6 +67,6 @@ def _import(path: str) -> type:
 
 registry = Registry()
 
-# Built-in implementations are added here as they're written (0.6: stub pipeline,
-# 0.7: null display).
+# Built-in implementations are added here as they're written (0.7: null display).
 registry.register("frame_source", "stub", "lucid_director.sources.stub:StubSource")
+registry.register("pipeline", "stub", "lucid_director.pipelines.stub:StubPipeline")

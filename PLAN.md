@@ -144,7 +144,7 @@ They're done in order; ask for them one at a time.
     window (bundled with Python, no installs), depth map alongside when present, `--scale` and
     `--fps`. A developer tool, not a `Display`; the real window is Phase 2's `OpenCVWindow`.
 
-- [ ] **0.6 `StubPipeline`.**
+- [x] **0.6 `StubPipeline`.**
   Returns the input frame (lightly tinted) and simulates cost and quality from the settings:
   latency grows with steps × resolution², style score rises with strength (with diminishing
   returns), and flicker rises with strength, a lot more under the `per_frame` seed policy. A
@@ -155,6 +155,16 @@ They're done in order; ask for them one at a time.
   more strength means a higher style score and more flicker, and a fixed seed means less flicker.
   Registered as `pipeline: stub`. Stub-specific settings (noise level, base latency) go in
   `pipeline.options`.
+  Lives in `pipelines/stub.py`, built as `StubPipeline(section, clock=None)`. Cost is computed from
+  the frame it's given, so after 0.7's resize that's `pipeline.resolution`. Stages `overhead`
+  (4 ms), `vae` (110 ms/MP) and `unet` (120 ms/MP per step): at 384×240, 1–4 steps take about
+  25/36/47/58 ms. It advances a `FakeClock` by that, and sleeps on a real clock. Style =
+  `(1 − e^(−3s)) / (1 − e^(−3))` × a step factor from 0.85 (1 step) toward 1; more steps had to help
+  a little, or 1 step would always win. Flicker = `0.25 × s²`, ×3 under `per_frame`. Results go
+  in `PipelineResult.metrics` as `style` and `flicker`. Noise is seeded (`options.seed`) and
+  clipped (scores 0–1, ms ≥ 0). The image is blended toward magenta by `tint × strength`.
+  Under the demo budgets (fps ≥ 20, flicker ≤ 0.15) the best setting is 3 steps, strength 0.75,
+  `fixed`, and a test pins that it isn't at a corner.
 
 - [ ] **0.7 Runtime loop, `NullDisplay`, CLI.**
   `run(config, frames=N)` wires source → pipeline → display through the registry and collects
