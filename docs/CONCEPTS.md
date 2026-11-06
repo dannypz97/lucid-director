@@ -133,6 +133,34 @@ game frame ──VAE encode──▶ latent ──UNet × steps──▶ styled 
 - **Prompt limits:** the text encoder (CLIP) reads only ~77 tokens (~200–300 characters); the rest
   is cut off. SD-Turbo runs without "guidance", so **negative prompts have no effect**.
 
+**The knobs pull against each other:**
+
+- **Steps → fps.** Each step is one full UNet pass, tens of ms on the 3060. 4 steps cost about
+  twice as much as 2. More steps give a cleaner image but fewer frames per second.
+- **Strength → style vs faithfulness.** Low strength (0.2) adds little noise, so the model can only
+  touch up details: close to the game, little style. High strength (0.8) erases most of the
+  original and the model reinvents it: strongly stylized, but it may drift (a doorway becomes a
+  window). Style gains shrink as strength rises: 0.2→0.4 helps a lot, 0.7→0.9 only a little.
+- **Style score:** how much the output looks like the prompt's style. Real pipelines measure it
+  with a scoring model like CLIP; the stub derives it from strength.
+- **Flicker.** Each frame is redrawn independently. The more the model reinvents, the more two
+  nearly identical game frames come out different: shimmering textures, jumping colours, details
+  popping in and out. Higher strength means more flicker.
+- **Seed → less flicker.** The added noise is random, and the seed picks which pattern you get.
+  `per_frame` rolls new noise every frame, so the model makes different choices even when the game
+  barely moved. `fixed` reuses the same noise, so similar inputs give similar outputs. It reduces
+  flicker but doesn't remove it, because the game frames still change.
+
+| Knob up | Gain | Cost |
+|---|---|---|
+| steps | cleaner image | lower fps |
+| resolution | sharper | much lower fps (cost ∝ pixels) |
+| strength | more style | more flicker, less faithful |
+| `per_frame` seed | more variety | much more flicker |
+
+The controller's job is to find a good balance among these. `StubPipeline` fakes the same shape of
+trade-offs so that search can be tested without a GPU.
+
 `PipelineResult.stage_ms` times each stage separately because different bottlenecks have different
 fixes:
 
@@ -313,6 +341,10 @@ thread adds **zero** per-frame cost. Nearly all the time is diffusion. Rough est
 | **p50 / p95** | Median / 95th percentile; 95% of samples are below p95 |
 | **Rollback** | Automatically reverting a change that broke a budget |
 | **Seed** | The starting value of a random generator; the same seed gives the same "random" sequence |
+| **Seed policy** | `fixed` reuses the same diffusion noise every frame (less flicker); `per_frame` draws new noise each frame |
+| **Steps** | Denoising passes per frame; each one is a full UNet run, so cost grows linearly |
+| **Strength** | How much noise img2img adds before denoising: 0 keeps the input, 1 ignores it |
+| **Style score** | How strongly the output matches the prompt's style, e.g. scored with CLIP |
 | **Stub** | A fake implementation with the real interface, for building and testing |
 | **TAESD** | A tiny, much faster VAE decoder; slightly softer output |
 | **Tic** | One Doom game update; 35 per second at normal speed |
